@@ -16,7 +16,7 @@ from document_intelligence_rag.evaluation.metrics import (
 from document_intelligence_rag.ingestion import load_documents
 from document_intelligence_rag.models import RetrievalResult, TextChunk
 from document_intelligence_rag.retrieval import KeywordRetriever, TfidfRetriever
-from document_intelligence_rag.retrieval.query_index import preview_text
+from document_intelligence_rag.retrieval.preview import preview_text
 
 logger = logging.getLogger(__name__)
 

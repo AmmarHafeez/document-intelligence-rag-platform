@@ -7,16 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from document_intelligence_rag.models import RetrievalResult
+from document_intelligence_rag.retrieval.preview import preview_text
 from document_intelligence_rag.retrieval.tfidf import TfidfRetriever
 
 logger = logging.getLogger(__name__)
-
-
-def preview_text(text: str, max_chars: int = 160) -> str:
-    preview = " ".join(text.split())
-    if len(preview) <= max_chars:
-        return preview
-    return f"{preview[: max_chars - 3]}..."
 
 
 def result_to_record(result: RetrievalResult) -> dict[str, Any]:

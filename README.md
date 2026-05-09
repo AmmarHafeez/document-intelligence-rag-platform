@@ -31,14 +31,16 @@ pip install -e .
 python -m pytest
 ```
 
-Add local demo documents under `data/raw/documents/`:
+Generate a tiny local demo corpus under ignored `data/raw/` folders:
 
 ```powershell
-New-Item -ItemType Directory -Force data/raw/documents
-Set-Content data/raw/documents/example.txt "A short local document about retrieval quality."
+python -m document_intelligence_rag.ingestion.create_demo_corpus `
+  --documents-dir data/raw/documents `
+  --queries-path data/raw/evaluation/queries.json `
+  --include-pdf
 ```
 
-Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet.
+The generator creates `rag_intro.md`, `vector_search.txt`, optional `pdf_ingestion_demo.pdf`, and matching retrieval evaluation labels. Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet.
 
 Run a retrieval query:
 
@@ -78,24 +80,7 @@ python -m document_intelligence_rag.evaluation.evaluate_grounding `
 
 Grounding checks are deterministic. They compare answer sentences against cited source text or previews and write metrics under `reports/metrics/`.
 
-Create tiny local evaluation labels:
-
-```powershell
-New-Item -ItemType Directory -Force data/raw/evaluation
-@'
-{
-  "queries": [
-    {
-      "query_id": "q1",
-      "query": "retrieval quality",
-      "relevant_document_ids": ["example"]
-    }
-  ]
-}
-'@ | Set-Content data/raw/evaluation/queries.json
-```
-
-Document IDs are derived from local file names, so `data/raw/documents/example.txt` has document ID `example`.
+Document IDs are derived from local file names, so `data/raw/documents/rag_intro.md` has document ID `rag_intro`.
 
 Run retrieval evaluation:
 
@@ -103,7 +88,7 @@ Run retrieval evaluation:
 python -m document_intelligence_rag.evaluation.evaluate_retrieval `
   --documents-dir data/raw/documents `
   --queries data/raw/evaluation/queries.json `
-  --output reports/metrics/retrieval_eval_tfidf.json `
+  --output reports/metrics/demo_retrieval_eval_tfidf.json `
   --backend tfidf `
   --chunk-size 800 `
   --chunk-overlap 120 `
@@ -112,9 +97,9 @@ python -m document_intelligence_rag.evaluation.evaluate_retrieval `
 
 ## Local Smoke-Test Results
 
-A tiny local retrieval evaluation has been run with 2 documents, 2 chunks, and 3 queries at `top_k=3`. Both keyword and TF-IDF retrieval returned `recall_at_k: 1.0`, `precision_at_k: 0.3333`, and `mean_reciprocal_rank: 1.0` for this simple demo. These are smoke-test results only, not a real benchmark; broader evaluation needs more documents and more diverse relevance labels.
+A tiny generated local demo corpus evaluation has been run with 3 documents (`rag_intro.md`, `vector_search.txt`, and `pdf_ingestion_demo.pdf`), 3 chunks, and 3 queries at `top_k=3`. The TF-IDF retriever returned `recall_at_k: 1.0`, `precision_at_k: 0.3333`, and `mean_reciprocal_rank: 1.0`. The PDF ingestion demo was included as `pdf_ingestion_demo.pdf` and was retrieved correctly for the PDF query. These are smoke-test results only, not a broad benchmark; broader evaluation needs more documents and more diverse relevance labels.
 
-The local metrics files are `reports/metrics/retrieval_eval_keyword.json` and `reports/metrics/retrieval_eval_tfidf.json`, and they remain ignored by Git.
+The generated documents, retrieval index, and local metrics file `reports/metrics/demo_retrieval_eval_tfidf.json` remain ignored by Git.
 
 A tiny local grounding smoke test has also been run from `reports/artifacts/answer_result.json` to `reports/metrics/grounding_eval.json`. It evaluated 1 answer, found `sentence_support_rate: 1.0`, `citation_coverage: 1.0`, `insufficient_context_count: 0`, and `unsupported_sentence_count: 0`. The evaluator used cited source previews because full cited source text was not available in that generated answer JSON. This is not human evaluation or a broad benchmark.
 
@@ -129,17 +114,26 @@ uvicorn document_intelligence_rag.api:app --reload
 ```powershell
 pip install -e .
 python -m pytest
+python -m document_intelligence_rag.ingestion.create_demo_corpus --documents-dir data/raw/documents --queries-path data/raw/evaluation/queries.json --include-pdf
 python -m document_intelligence_rag.retrieval.build_index --documents-dir data/raw/documents --index-path indexes/tfidf_index.joblib --backend tfidf
 python -m document_intelligence_rag.retrieval.query_index --index-path indexes/tfidf_index.joblib --query "example query" --top-k 3
 python -m document_intelligence_rag.answering.answer_query --index-path indexes/tfidf_index.joblib --query "example query" --top-k 3 --output reports/artifacts/answer_result.json
 python -m document_intelligence_rag.evaluation.evaluate_grounding --answers reports/artifacts/answer_result.json --output reports/metrics/grounding_eval.json
 python -m document_intelligence_rag.evaluation.evaluate_retrieval --documents-dir data/raw/documents --queries data/raw/evaluation/queries.json --output reports/metrics/retrieval_eval_keyword.json --backend keyword --top-k 3
-python -m document_intelligence_rag.evaluation.evaluate_retrieval --documents-dir data/raw/documents --queries data/raw/evaluation/queries.json --output reports/metrics/retrieval_eval_tfidf.json --backend tfidf --top-k 3
+python -m document_intelligence_rag.evaluation.evaluate_retrieval --documents-dir data/raw/documents --queries data/raw/evaluation/queries.json --output reports/metrics/demo_retrieval_eval_tfidf.json --backend tfidf --top-k 3
 uvicorn document_intelligence_rag.api:app --host 127.0.0.1 --port 8000
 docker compose up --build
 ```
 
-Call the answer endpoint:
+Call the retrieval and answer endpoints:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/retrieve `
+  -ContentType "application/json" `
+  -Body '{"query":"What is retrieval augmented generation?","top_k":3}'
+```
 
 ```powershell
 Invoke-RestMethod `

@@ -17,36 +17,22 @@ pip install -e .
 python -m pytest
 ```
 
-## Add Local Demo Documents
+## Generate Local Demo Corpus
 
 ```powershell
-New-Item -ItemType Directory -Force data/raw/documents
-Set-Content data/raw/documents/guide.txt "Retrieval quality depends on matching user questions to relevant chunks."
-Set-Content data/raw/documents/notes.md "# Notes`nChunk overlap helps preserve context across chunk boundaries."
+python -m document_intelligence_rag.ingestion.create_demo_corpus `
+  --documents-dir data/raw/documents `
+  --queries-path data/raw/evaluation/queries.json `
+  --include-pdf
 ```
 
-Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet. `data/raw/` is ignored by Git so private local documents remain outside version control.
+The generator creates `rag_intro.md`, `vector_search.txt`, optional `pdf_ingestion_demo.pdf`, and matching `data/raw/evaluation/queries.json` relevance labels. It does not overwrite existing files unless `--overwrite` is passed.
 
-## Add Local Evaluation Queries
+Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet. `data/raw/` is ignored by Git so generated demo files and private local documents remain outside version control.
 
-Evaluation labels live outside Git under `data/raw/evaluation/`.
+## Local Evaluation Queries
 
-```powershell
-New-Item -ItemType Directory -Force data/raw/evaluation
-@'
-{
-  "queries": [
-    {
-      "query_id": "q1",
-      "query": "chunk overlap",
-      "relevant_document_ids": ["notes"]
-    }
-  ]
-}
-'@ | Set-Content data/raw/evaluation/queries.json
-```
-
-Document IDs are derived from local file names, so `data/raw/documents/notes.md` has document ID `notes`. Labels can use `relevant_document_ids`, `relevant_chunk_ids`, or both. When chunk labels are present, evaluation uses chunk IDs for that query.
+Evaluation labels live outside Git under `data/raw/evaluation/`. Document IDs are derived from local file names, so `data/raw/documents/rag_intro.md` has document ID `rag_intro`. Labels can use `relevant_document_ids`, `relevant_chunk_ids`, or both. When chunk labels are present, evaluation uses chunk IDs for that query.
 
 ## Build TF-IDF Index
 
@@ -125,7 +111,7 @@ python -m document_intelligence_rag.evaluation.evaluate_retrieval `
 python -m document_intelligence_rag.evaluation.evaluate_retrieval `
   --documents-dir data/raw/documents `
   --queries data/raw/evaluation/queries.json `
-  --output reports/metrics/retrieval_eval_tfidf.json `
+  --output reports/metrics/demo_retrieval_eval_tfidf.json `
   --backend tfidf `
   --chunk-size 800 `
   --chunk-overlap 120 `
@@ -136,14 +122,15 @@ Evaluation reports are written to `reports/metrics/`, which is ignored by Git.
 
 ## Current Local Evaluation Results
 
-The current local smoke-test run used `data/raw/evaluation/queries.json` with 3 queries, `evaluated_at_k: 3`, 2 documents, and 2 chunks. Both keyword and TF-IDF retrieval ranked the relevant chunk first for the simple demo queries.
+The current local smoke-test run used the generated demo corpus under `data/raw/` with 3 documents (`rag_intro.md`, `vector_search.txt`, and `pdf_ingestion_demo.pdf`), 3 chunks, and 3 queries. The TF-IDF evaluation used `evaluated_at_k: 3`. Generated documents, the retrieval index, and metrics files remain ignored by Git.
 
-| Backend | recall_at_k | precision_at_k | mean_reciprocal_rank | Metrics file |
-| --- | ---: | ---: | ---: | --- |
-| keyword | 1.0 | 0.3333 | 1.0 | `reports/metrics/retrieval_eval_keyword.json` |
-| tfidf | 1.0 | 0.3333 | 1.0 | `reports/metrics/retrieval_eval_tfidf.json` |
+The PDF ingestion demo was included as `pdf_ingestion_demo.pdf` and was retrieved correctly for the PDF query.
 
-These are tiny local smoke-test results, not a real benchmark. Generated documents, evaluation labels, and metrics JSON remain local and ignored by Git.
+| Backend | document_count | chunk_count | query_count | evaluated_at_k | recall_at_k | precision_at_k | mean_reciprocal_rank | Metrics file |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| tfidf | 3 | 3 | 3 | 3 | 1.0 | 0.3333 | 1.0 | `reports/metrics/demo_retrieval_eval_tfidf.json` |
+
+These are tiny generated local demo corpus results, not a broad benchmark.
 
 ## Current Local Grounding Result
 

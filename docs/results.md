@@ -2,18 +2,19 @@
 
 The initial version includes unit-tested local retrieval components for text, Markdown, and PDF ingestion, chunking, keyword retrieval, TF-IDF vector retrieval, saved index loading, extractive grounded answer generation, deterministic grounding evaluation, retrieval evaluation, evaluation metrics, and FastAPI serving.
 
-## Local Smoke-Test Results
+The tiny local demo corpus can be regenerated under ignored `data/raw/` folders with the demo corpus generator. No new numeric results are claimed until the local commands are run.
 
-These results come from a tiny local demo corpus with 2 documents, 2 chunks, and 3 evaluation queries from `data/raw/evaluation/queries.json`. They are a smoke test for the retrieval workflow, not a real benchmark.
+## Local Demo Corpus Smoke-Test Result
 
-The run used `evaluated_at_k: 3`. Generated documents, evaluation labels, and metrics JSON remain local and ignored by Git.
+These results come from a tiny generated local demo corpus under `data/raw/`. The corpus contains 3 documents (`rag_intro.md`, `vector_search.txt`, and `pdf_ingestion_demo.pdf`), 3 chunks, and 3 evaluation queries. Generated documents, the retrieval index, and metrics files remain ignored by Git.
 
-| Backend | Documents | Chunks | recall_at_k | precision_at_k | mean_reciprocal_rank | Metrics file |
-| --- | ---: | ---: | ---: | ---: | ---: | --- |
-| keyword | 2 | 2 | 1.0 | 0.3333 | 1.0 | `reports/metrics/retrieval_eval_keyword.json` |
-| tfidf | 2 | 2 | 1.0 | 0.3333 | 1.0 | `reports/metrics/retrieval_eval_tfidf.json` |
+The PDF ingestion demo was included as `pdf_ingestion_demo.pdf` and was retrieved correctly for the PDF query. This is a smoke test for the local workflow, not a broad benchmark.
 
-Both retrievers ranked the relevant chunk first for the simple demo queries. Broader evaluation requires a larger document set and more diverse relevance labels.
+| Backend | Documents | Chunks | Queries | evaluated_at_k | recall_at_k | precision_at_k | mean_reciprocal_rank | Metrics file |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| tfidf | 3 | 3 | 3 | 3 | 1.0 | 0.3333 | 1.0 | `reports/metrics/demo_retrieval_eval_tfidf.json` |
+
+Broader evaluation requires a larger document set and more diverse relevance labels.
 
 ## Local Grounding Smoke-Test Result
 

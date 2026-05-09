@@ -2,7 +2,9 @@
 
 ```mermaid
 flowchart LR
-    A["Local documents (.txt, .md, .pdf)"] --> B["Ingestion"]
+    Z["Demo corpus generator"] --> A["Local documents (.txt, .md, .pdf)"]
+    Z --> Y["Local relevance labels"]
+    A --> B["Ingestion"]
     B --> C["Document objects"]
     C --> D["Chunking"]
     D --> E["Text chunks with offsets"]
@@ -28,6 +30,10 @@ flowchart LR
 ### Ingestion
 
 Reads local `.txt`, `.md`, and text-based `.pdf` files, derives stable document metadata, and rejects unsupported file extensions with clear errors. PDF ingestion extracts local text only; scanned-image PDFs and OCR are not supported.
+
+### Demo Corpus Generation
+
+Creates tiny local demo documents and matching retrieval evaluation labels under ignored `data/raw/` paths. Existing files are preserved unless overwrite is requested.
 
 ### Chunking
 
