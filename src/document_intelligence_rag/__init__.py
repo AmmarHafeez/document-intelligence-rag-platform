@@ -1,5 +1,6 @@
 """Local-first document retrieval components."""
 
+from document_intelligence_rag.answering import GroundedAnswer, SourcePreview, build_extractive_answer
 from document_intelligence_rag.chunking import split_document, split_documents
 from document_intelligence_rag.evaluation import (
     mean_reciprocal_rank,
@@ -12,10 +13,13 @@ from document_intelligence_rag.retrieval import KeywordRetriever, TfidfRetriever
 
 __all__ = [
     "Document",
+    "GroundedAnswer",
     "KeywordRetriever",
     "RetrievalResult",
+    "SourcePreview",
     "TextChunk",
     "TfidfRetriever",
+    "build_extractive_answer",
     "load_document",
     "load_documents",
     "mean_reciprocal_rank",

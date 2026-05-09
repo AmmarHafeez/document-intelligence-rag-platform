@@ -7,6 +7,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from document_intelligence_rag.answering import (
+    GroundedAnswer,
+    SourcePreview,
+    build_extractive_answer,
+)
 from document_intelligence_rag.chunking import split_documents
 from document_intelligence_rag.config import AppConfig, load_config
 from document_intelligence_rag.ingestion import load_documents
@@ -37,6 +42,27 @@ class RetrieveResponse(BaseModel):
     query: str
     top_k: int
     results: list[ChunkMatchResponse]
+
+
+class SourcePreviewResponse(BaseModel):
+    chunk_id: str
+    document_id: str
+    source_path: str
+    preview: str
+    score: float
+
+
+class AnswerResponse(BaseModel):
+    query: str
+    top_k: int
+    answer: str
+    cited_chunks: list[str]
+    cited_documents: list[str]
+    source_previews: list[SourcePreviewResponse]
+    confidence_score: float
+    insufficient_context: bool
+    backend: str
+    index_path: str
 
 
 @dataclass(slots=True)
@@ -181,6 +207,37 @@ def _result_to_response(result: RetrievalResult) -> ChunkMatchResponse:
     )
 
 
+def _source_preview_to_response(source: SourcePreview) -> SourcePreviewResponse:
+    return SourcePreviewResponse(
+        chunk_id=source.chunk_id,
+        document_id=source.document_id,
+        source_path=source.source_path,
+        preview=source.preview,
+        score=source.score,
+    )
+
+
+def _answer_to_response(
+    *,
+    query: str,
+    top_k: int,
+    answer: GroundedAnswer,
+    state: IndexState,
+) -> AnswerResponse:
+    return AnswerResponse(
+        query=query,
+        top_k=top_k,
+        answer=answer.answer,
+        cited_chunks=answer.cited_chunk_ids,
+        cited_documents=answer.cited_document_ids,
+        source_previews=[_source_preview_to_response(source) for source in answer.source_previews],
+        confidence_score=answer.confidence_score,
+        insufficient_context=answer.insufficient_context,
+        backend=state.backend,
+        index_path=str(state.config.index_path),
+    )
+
+
 def create_app(config: AppConfig | None = None) -> FastAPI:
     resolved_config = config or load_config()
     state = _build_index_state(resolved_config)
@@ -220,6 +277,25 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             query=request.query,
             top_k=top_k,
             results=[_result_to_response(result) for result in results],
+        )
+
+    @app.post("/answer", response_model=AnswerResponse)
+    def answer(request: RetrieveRequest) -> AnswerResponse:
+        current_state: IndexState = app.state.index_state
+        if current_state.retriever is None:
+            raise HTTPException(
+                status_code=503,
+                detail=current_state.error or "Retrieval index is not available.",
+            )
+
+        top_k = request.top_k or current_state.config.top_k
+        results = current_state.retriever.retrieve(request.query, top_k=top_k)
+        grounded_answer = build_extractive_answer(request.query, results)
+        return _answer_to_response(
+            query=request.query,
+            top_k=top_k,
+            answer=grounded_answer,
+            state=current_state,
         )
 
     return app

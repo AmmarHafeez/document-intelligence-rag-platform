@@ -1,8 +1,8 @@
 # document-intelligence-rag-platform
 
-A local-first baseline for document ingestion, text chunking, keyword and TF-IDF vector retrieval, FastAPI serving, and retrieval evaluation.
+A local-first baseline for document ingestion, text chunking, keyword and TF-IDF vector retrieval, extractive grounded answering, FastAPI serving, and retrieval evaluation.
 
-The first milestone focuses on deterministic retrieval components that can run on small local document folders. It does not call LLMs, paid services, external embedding APIs, or model downloads.
+The first milestone focuses on deterministic retrieval and extractive answer components that can run on small local document folders. It does not call LLMs, paid services, external embedding APIs, or model downloads.
 
 ## Why This Matters
 
@@ -14,6 +14,7 @@ Document retrieval systems are easier to improve when the core pipeline is measu
 - Split documents into overlapping chunks with stable character offsets.
 - Retrieve chunks with a deterministic token-overlap baseline.
 - Build, save, load, and query a local TF-IDF retrieval index.
+- Build local grounded answers by selecting sentences from retrieved chunks.
 - Evaluate ranked retrieval with recall@k, precision@k, and mean reciprocal rank.
 - Run offline retrieval evaluation against local JSON relevance labels.
 - Serve retrieval through FastAPI using a saved local index.
@@ -51,6 +52,18 @@ python -m document_intelligence_rag.retrieval.query_index `
   --query "retrieval quality" `
   --top-k 3
 ```
+
+Ask a local grounded question:
+
+```powershell
+python -m document_intelligence_rag.answering.answer_query `
+  --index-path indexes/tfidf_index.joblib `
+  --query "What is retrieval augmented generation?" `
+  --top-k 3 `
+  --output reports/artifacts/answer_result.json
+```
+
+Answers are extractive: text is assembled from retrieved chunks and returned with cited chunk and document IDs.
 
 Create tiny local evaluation labels:
 
@@ -103,10 +116,21 @@ pip install -e .
 python -m pytest
 python -m document_intelligence_rag.retrieval.build_index --documents-dir data/raw/documents --index-path indexes/tfidf_index.joblib --backend tfidf
 python -m document_intelligence_rag.retrieval.query_index --index-path indexes/tfidf_index.joblib --query "example query" --top-k 3
+python -m document_intelligence_rag.answering.answer_query --index-path indexes/tfidf_index.joblib --query "example query" --top-k 3 --output reports/artifacts/answer_result.json
 python -m document_intelligence_rag.evaluation.evaluate_retrieval --documents-dir data/raw/documents --queries data/raw/evaluation/queries.json --output reports/metrics/retrieval_eval_keyword.json --backend keyword --top-k 3
 python -m document_intelligence_rag.evaluation.evaluate_retrieval --documents-dir data/raw/documents --queries data/raw/evaluation/queries.json --output reports/metrics/retrieval_eval_tfidf.json --backend tfidf --top-k 3
 uvicorn document_intelligence_rag.api:app --host 127.0.0.1 --port 8000
 docker compose up --build
+```
+
+Call the answer endpoint:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/answer `
+  -ContentType "application/json" `
+  -Body '{"query":"What is retrieval augmented generation?","top_k":3}'
 ```
 
 ## Artifact Policy

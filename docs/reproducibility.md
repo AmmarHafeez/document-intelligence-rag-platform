@@ -80,6 +80,20 @@ python -m document_intelligence_rag.retrieval.query_index `
   --output reports/artifacts/retrieval_results.json
 ```
 
+## Ask A Grounded Question
+
+The answer workflow loads a saved retrieval index, retrieves chunks, and builds an extractive answer from retrieved sentences.
+
+```powershell
+python -m document_intelligence_rag.answering.answer_query `
+  --index-path indexes/tfidf_index.joblib `
+  --query "What is retrieval augmented generation?" `
+  --top-k 3 `
+  --output reports/artifacts/answer_result.json
+```
+
+Answer JSON is written to `reports/artifacts/`, which is ignored by Git. The answer text is grounded in retrieved chunks and includes cited chunk and document IDs.
+
 ## Run Keyword Evaluation
 
 ```powershell
@@ -141,4 +155,14 @@ Invoke-RestMethod `
   -Uri http://127.0.0.1:8000/retrieve `
   -ContentType "application/json" `
   -Body '{"query":"chunk overlap","top_k":3}'
+```
+
+## Call Answer
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8000/answer `
+  -ContentType "application/json" `
+  -Body '{"query":"What is retrieval augmented generation?","top_k":3}'
 ```

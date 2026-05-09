@@ -68,3 +68,47 @@ def test_retrieve_endpoint_returns_service_error_without_index(tmp_path):
 
     assert response.status_code == 503
     assert "TF-IDF index" in response.json()["detail"]
+
+
+def test_answer_endpoint_returns_grounded_answer_from_tfidf_index(tmp_path):
+    index_path = tmp_path / "indexes" / "tfidf_index.joblib"
+    chunk = TextChunk(
+        chunk_id="doc_rag:0000",
+        document_id="doc_rag",
+        source_path=tmp_path / "doc_rag.txt",
+        text="Retrieval augmented generation uses relevant chunks for grounded answers.",
+        start_char=0,
+        end_char=73,
+    )
+    TfidfRetriever().fit([chunk]).save(index_path)
+    app = create_app(
+        AppConfig(
+            index_path=index_path,
+            retriever_backend="tfidf",
+            top_k=1,
+        )
+    )
+    client = TestClient(app)
+
+    response = client.post(
+        "/answer",
+        json={"query": "What is retrieval augmented generation?", "top_k": 1},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["insufficient_context"] is False
+    assert payload["cited_chunks"] == ["doc_rag:0000"]
+    assert payload["cited_documents"] == ["doc_rag"]
+    assert payload["source_previews"][0]["chunk_id"] == "doc_rag:0000"
+    assert "Retrieval augmented generation" in payload["answer"]
+
+
+def test_answer_endpoint_returns_service_error_without_index(tmp_path):
+    app = create_app(AppConfig(index_path=tmp_path / "missing.joblib"))
+    client = TestClient(app)
+
+    response = client.post("/answer", json={"query": "anything", "top_k": 1})
+
+    assert response.status_code == 503
+    assert "TF-IDF index" in response.json()["detail"]

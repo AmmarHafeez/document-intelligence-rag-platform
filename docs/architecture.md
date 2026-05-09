@@ -12,9 +12,12 @@ flowchart LR
     H --> I["TF-IDF retriever"]
     F --> J["Ranked chunks"]
     I --> J
+    J --> O["Grounded answer builder"]
+    O --> P["Extractive answer with citations"]
     J --> K["Evaluation metrics"]
     J --> N["Evaluation report under reports/metrics/"]
     I --> L["FastAPI service"]
+    O --> L
     H --> M["Query CLI"]
 ```
 
@@ -40,13 +43,17 @@ Builds a local TF-IDF matrix from chunk text, saves it with the chunk metadata, 
 
 Provides simple retrieval metrics for small labeled examples: recall@k, precision@k, and mean reciprocal rank.
 
+### Grounded Answering
+
+Selects sentences from retrieved chunks using question-token overlap. Answers are extractive and include cited chunk IDs, cited document IDs, source previews, and a simple coverage score.
+
 ### Retrieval Evaluation Workflow
 
 Reads local relevance labels, builds the selected retriever in memory, evaluates ranked results per query, and writes a JSON metrics report under `reports/metrics/`.
 
 ### API
 
-Loads the configured saved TF-IDF index at startup and serves retrieval through `POST /retrieve`. `GET /health` remains available even when no saved index is present.
+Loads the configured saved TF-IDF index at startup and serves retrieval through `POST /retrieve` and extractive answering through `POST /answer`. `GET /health` remains available even when no saved index is present.
 
 ### Configuration
 
