@@ -17,6 +17,8 @@ def tokenize(text: str) -> list[str]:
 
 
 class KeywordRetriever:
+    backend = "keyword"
+
     def __init__(self, chunks: Iterable[TextChunk]) -> None:
         self._chunks = list(chunks)
         self._chunk_tokens = {

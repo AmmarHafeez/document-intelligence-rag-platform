@@ -2,10 +2,12 @@ from fastapi.testclient import TestClient
 
 from document_intelligence_rag.api import create_app
 from document_intelligence_rag.config import AppConfig
+from document_intelligence_rag.models import TextChunk
+from document_intelligence_rag.retrieval import TfidfRetriever
 
 
-def test_health_endpoint_works_without_documents(tmp_path):
-    app = create_app(AppConfig(documents_dir=tmp_path / "missing"))
+def test_health_endpoint_works_without_index(tmp_path):
+    app = create_app(AppConfig(index_path=tmp_path / "missing.joblib"))
     client = TestClient(app)
 
     response = client.get("/health")
@@ -14,24 +16,34 @@ def test_health_endpoint_works_without_documents(tmp_path):
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["index_ready"] is False
+    assert payload["backend"] == "tfidf"
 
 
-def test_retrieve_endpoint_returns_ranked_chunks(tmp_path):
-    documents_dir = tmp_path / "documents"
-    documents_dir.mkdir()
-    (documents_dir / "alpha.txt").write_text(
-        "Alpha retrieval systems rank relevant chunks first.",
-        encoding="utf-8",
-    )
-    (documents_dir / "beta.md").write_text(
-        "# Beta\nChunk overlap keeps context available.",
-        encoding="utf-8",
-    )
+def test_retrieve_endpoint_returns_ranked_chunks_from_tfidf_index(tmp_path):
+    index_path = tmp_path / "indexes" / "tfidf_index.joblib"
+    chunks = [
+        TextChunk(
+            chunk_id="c1",
+            document_id="d1",
+            source_path=tmp_path / "alpha.txt",
+            text="Alpha retrieval systems rank relevant chunks first.",
+            start_char=0,
+            end_char=52,
+        ),
+        TextChunk(
+            chunk_id="c2",
+            document_id="d2",
+            source_path=tmp_path / "beta.md",
+            text="Chunk overlap keeps context available.",
+            start_char=0,
+            end_char=38,
+        ),
+    ]
+    TfidfRetriever().fit(chunks).save(index_path)
     app = create_app(
         AppConfig(
-            documents_dir=documents_dir,
-            chunk_size=80,
-            chunk_overlap=10,
+            index_path=index_path,
+            retriever_backend="tfidf",
             top_k=2,
         )
     )
@@ -49,10 +61,10 @@ def test_retrieve_endpoint_returns_ranked_chunks(tmp_path):
 
 
 def test_retrieve_endpoint_returns_service_error_without_index(tmp_path):
-    app = create_app(AppConfig(documents_dir=tmp_path / "missing"))
+    app = create_app(AppConfig(index_path=tmp_path / "missing.joblib"))
     client = TestClient(app)
 
     response = client.post("/retrieve", json={"query": "anything", "top_k": 1})
 
     assert response.status_code == 503
-    assert "document directory" in response.json()["detail"]
+    assert "TF-IDF index" in response.json()["detail"]

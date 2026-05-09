@@ -7,9 +7,14 @@ flowchart LR
     C --> D["Chunking"]
     D --> E["Text chunks with offsets"]
     E --> F["Keyword retriever"]
-    F --> G["Ranked chunks"]
-    G --> H["Evaluation metrics"]
-    F --> I["FastAPI service"]
+    E --> G["TF-IDF index builder"]
+    G --> H["Saved index under indexes/"]
+    H --> I["TF-IDF retriever"]
+    F --> J["Ranked chunks"]
+    I --> J
+    J --> K["Evaluation metrics"]
+    I --> L["FastAPI service"]
+    H --> M["Query CLI"]
 ```
 
 ## Component Responsibilities
@@ -26,14 +31,18 @@ Splits document text into overlapping character windows. Each chunk carries its 
 
 Builds an in-memory keyword baseline over chunks. Queries are tokenized deterministically, scored by token overlap, and returned in ranked order.
 
+### TF-IDF Vector Retrieval
+
+Builds a local TF-IDF matrix from chunk text, saves it with the chunk metadata, and loads it for deterministic cosine-similarity retrieval.
+
 ### Evaluation
 
 Provides simple retrieval metrics for small labeled examples: recall@k, precision@k, and mean reciprocal rank.
 
 ### API
 
-Loads the configured local document folder at startup and serves retrieval through `POST /retrieve`. `GET /health` remains available even when no local documents are present.
+Loads the configured saved TF-IDF index at startup and serves retrieval through `POST /retrieve`. `GET /health` remains available even when no saved index is present.
 
 ### Configuration
 
-Defaults live in `configs/default.yaml` and control the local document path, chunk size, chunk overlap, and default result count.
+Defaults live in `configs/default.yaml` and control the local document path, chunk size, chunk overlap, default result count, retriever backend, and saved index path.

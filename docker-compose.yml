@@ -5,6 +5,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data/raw/documents:/app/data/raw/documents:ro
+      - ./indexes:/app/indexes:ro
       - ./configs:/app/configs:ro
     environment:
       DOCUMENT_INTELLIGENCE_RAG_CONFIG: /app/configs/default.yaml

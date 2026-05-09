@@ -11,6 +11,8 @@ DEFAULT_DOCUMENTS_DIR = Path("data/raw/documents")
 DEFAULT_CHUNK_SIZE = 800
 DEFAULT_CHUNK_OVERLAP = 120
 DEFAULT_TOP_K = 5
+DEFAULT_RETRIEVER_BACKEND = "tfidf"
+DEFAULT_INDEX_PATH = Path("indexes/tfidf_index.joblib")
 CONFIG_ENV_VAR = "DOCUMENT_INTELLIGENCE_RAG_CONFIG"
 
 
@@ -20,6 +22,8 @@ class AppConfig:
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
     top_k: int = DEFAULT_TOP_K
+    retriever_backend: str = DEFAULT_RETRIEVER_BACKEND
+    index_path: Path = DEFAULT_INDEX_PATH
 
 
 def default_config_path() -> Path:
@@ -32,6 +36,8 @@ def _coerce_config(data: dict[str, Any]) -> AppConfig:
         chunk_size=int(data.get("chunk_size", DEFAULT_CHUNK_SIZE)),
         chunk_overlap=int(data.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)),
         top_k=int(data.get("top_k", DEFAULT_TOP_K)),
+        retriever_backend=str(data.get("retriever_backend", DEFAULT_RETRIEVER_BACKEND)),
+        index_path=Path(data.get("index_path", DEFAULT_INDEX_PATH)),
     )
 
 

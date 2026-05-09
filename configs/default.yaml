@@ -2,3 +2,5 @@ documents_dir: data/raw/documents
 chunk_size: 800
 chunk_overlap: 120
 top_k: 5
+retriever_backend: tfidf
+index_path: indexes/tfidf_index.joblib

@@ -8,13 +8,14 @@ from document_intelligence_rag.evaluation import (
 )
 from document_intelligence_rag.ingestion import load_document, load_documents
 from document_intelligence_rag.models import Document, RetrievalResult, TextChunk
-from document_intelligence_rag.retrieval import KeywordRetriever
+from document_intelligence_rag.retrieval import KeywordRetriever, TfidfRetriever
 
 __all__ = [
     "Document",
     "KeywordRetriever",
     "RetrievalResult",
     "TextChunk",
+    "TfidfRetriever",
     "load_document",
     "load_documents",
     "mean_reciprocal_rank",

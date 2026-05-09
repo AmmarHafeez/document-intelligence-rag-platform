@@ -11,7 +11,7 @@ from document_intelligence_rag.chunking import split_documents
 from document_intelligence_rag.config import AppConfig, load_config
 from document_intelligence_rag.ingestion import load_documents
 from document_intelligence_rag.models import RetrievalResult
-from document_intelligence_rag.retrieval import KeywordRetriever
+from document_intelligence_rag.retrieval import KeywordRetriever, TfidfRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +42,10 @@ class RetrieveResponse(BaseModel):
 @dataclass(slots=True)
 class IndexState:
     config: AppConfig
-    retriever: KeywordRetriever | None
+    retriever: KeywordRetriever | TfidfRetriever | None
     document_count: int
     chunk_count: int
+    backend: str
     error: str | None = None
 
     @property
@@ -53,18 +54,79 @@ class IndexState:
 
 
 def _build_index_state(config: AppConfig) -> IndexState:
+    if config.retriever_backend == "tfidf":
+        index_path = Path(config.index_path)
+        if not index_path.exists():
+            message = f"No TF-IDF index found at {index_path}."
+            logger.info(message)
+            return IndexState(
+                config=config,
+                retriever=None,
+                document_count=0,
+                chunk_count=0,
+                backend=config.retriever_backend,
+                error=message,
+            )
+
+        try:
+            retriever = TfidfRetriever.load(index_path)
+            return IndexState(
+                config=config,
+                retriever=retriever,
+                document_count=retriever.document_count,
+                chunk_count=retriever.chunk_count,
+                backend=config.retriever_backend,
+            )
+        except Exception as exc:
+            message = f"TF-IDF index is not available: {exc}"
+            logger.exception(message)
+            return IndexState(
+                config=config,
+                retriever=None,
+                document_count=0,
+                chunk_count=0,
+                backend=config.retriever_backend,
+                error=message,
+            )
+
+    if config.retriever_backend != "keyword":
+        message = f"Unsupported retriever backend: {config.retriever_backend}."
+        logger.info(message)
+        return IndexState(
+            config=config,
+            retriever=None,
+            document_count=0,
+            chunk_count=0,
+            backend=config.retriever_backend,
+            error=message,
+        )
+
     documents_dir = Path(config.documents_dir)
     if not documents_dir.exists():
         message = f"No document directory found at {documents_dir}."
         logger.info(message)
-        return IndexState(config=config, retriever=None, document_count=0, chunk_count=0, error=message)
+        return IndexState(
+            config=config,
+            retriever=None,
+            document_count=0,
+            chunk_count=0,
+            backend=config.retriever_backend,
+            error=message,
+        )
 
     try:
         documents = load_documents(documents_dir)
         if not documents:
             message = f"No supported documents found in {documents_dir}."
             logger.info(message)
-            return IndexState(config=config, retriever=None, document_count=0, chunk_count=0, error=message)
+            return IndexState(
+                config=config,
+                retriever=None,
+                document_count=0,
+                chunk_count=0,
+                backend=config.retriever_backend,
+                error=message,
+            )
 
         chunks = split_documents(
             documents,
@@ -79,6 +141,7 @@ def _build_index_state(config: AppConfig) -> IndexState:
                 retriever=None,
                 document_count=len(documents),
                 chunk_count=0,
+                backend=config.retriever_backend,
                 error=message,
             )
 
@@ -88,11 +151,19 @@ def _build_index_state(config: AppConfig) -> IndexState:
             retriever=retriever,
             document_count=len(documents),
             chunk_count=len(chunks),
+            backend=config.retriever_backend,
         )
     except Exception as exc:
         message = f"Retrieval index is not available: {exc}"
         logger.exception(message)
-        return IndexState(config=config, retriever=None, document_count=0, chunk_count=0, error=message)
+        return IndexState(
+            config=config,
+            retriever=None,
+            document_count=0,
+            chunk_count=0,
+            backend=config.retriever_backend,
+            error=message,
+        )
 
 
 def _result_to_response(result: RetrievalResult) -> ChunkMatchResponse:
@@ -127,8 +198,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return {
             "status": "ok",
             "index_ready": current_state.ready,
+            "backend": current_state.backend,
             "document_count": current_state.document_count,
             "chunk_count": current_state.chunk_count,
+            "index_path": str(current_state.config.index_path),
             "error": current_state.error,
         }
 
