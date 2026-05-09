@@ -13,6 +13,7 @@ flowchart LR
     F --> J["Ranked chunks"]
     I --> J
     J --> K["Evaluation metrics"]
+    J --> N["Evaluation report under reports/metrics/"]
     I --> L["FastAPI service"]
     H --> M["Query CLI"]
 ```
@@ -38,6 +39,10 @@ Builds a local TF-IDF matrix from chunk text, saves it with the chunk metadata, 
 ### Evaluation
 
 Provides simple retrieval metrics for small labeled examples: recall@k, precision@k, and mean reciprocal rank.
+
+### Retrieval Evaluation Workflow
+
+Reads local relevance labels, builds the selected retriever in memory, evaluates ranked results per query, and writes a JSON metrics report under `reports/metrics/`.
 
 ### API
 

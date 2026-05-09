@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import hashlib
 import logging
+import re
 from pathlib import Path
 
 from document_intelligence_rag.models import Document
@@ -9,6 +9,7 @@ from document_intelligence_rag.models import Document
 logger = logging.getLogger(__name__)
 
 SUPPORTED_EXTENSIONS = {".txt", ".md"}
+DOCUMENT_ID_PATTERN = re.compile(r"[^a-z0-9_]+")
 
 
 class UnsupportedDocumentError(ValueError):
@@ -19,12 +20,10 @@ def _supported_extensions_message() -> str:
     return ", ".join(sorted(SUPPORTED_EXTENSIONS))
 
 
-def _document_id_for(path: Path, text: str) -> str:
-    digest = hashlib.sha1()
-    digest.update(path.as_posix().encode("utf-8"))
-    digest.update(b"\0")
-    digest.update(text.encode("utf-8"))
-    return digest.hexdigest()[:16]
+def _document_id_for(path: Path) -> str:
+    stem = path.stem.strip().lower().replace("-", "_")
+    document_id = DOCUMENT_ID_PATTERN.sub("_", stem).strip("_")
+    return document_id or "document"
 
 
 def _title_from_markdown(text: str, fallback: str) -> str:
@@ -68,7 +67,7 @@ def load_document(path: str | Path) -> Document:
 
     text = source_path.read_text(encoding="utf-8")
     document = Document(
-        document_id=_document_id_for(source_path, text),
+        document_id=_document_id_for(source_path),
         source_path=source_path,
         title=_derive_title(source_path, text),
         text=text,
@@ -89,5 +88,8 @@ def iter_document_paths(directory: str | Path) -> list[Path]:
 def load_documents(directory: str | Path) -> list[Document]:
     documents: list[Document] = []
     for path in iter_document_paths(directory):
-        documents.append(load_document(path))
+        document = load_document(path)
+        if any(existing.document_id == document.document_id for existing in documents):
+            raise ValueError(f"Duplicate document_id '{document.document_id}' found under {directory}.")
+        documents.append(document)
     return documents
