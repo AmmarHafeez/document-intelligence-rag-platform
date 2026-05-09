@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-    A["Local documents (.txt, .md)"] --> B["Ingestion"]
+    A["Local documents (.txt, .md, .pdf)"] --> B["Ingestion"]
     B --> C["Document objects"]
     C --> D["Chunking"]
     D --> E["Text chunks with offsets"]
@@ -27,7 +27,7 @@ flowchart LR
 
 ### Ingestion
 
-Reads local `.txt` and `.md` files, derives stable document metadata, and rejects unsupported file extensions with clear errors.
+Reads local `.txt`, `.md`, and text-based `.pdf` files, derives stable document metadata, and rejects unsupported file extensions with clear errors. PDF ingestion extracts local text only; scanned-image PDFs and OCR are not supported.
 
 ### Chunking
 

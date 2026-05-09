@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -10,6 +10,7 @@ class Document:
     source_path: Path
     title: str
     text: str
+    metadata: dict[str, str | int | float | bool] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

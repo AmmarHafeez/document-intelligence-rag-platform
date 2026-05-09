@@ -10,7 +10,7 @@ Document retrieval systems are easier to improve when the core pipeline is measu
 
 ## Key Capabilities
 
-- Ingest `.txt` and `.md` files from a local directory.
+- Ingest `.txt`, `.md`, and text-based `.pdf` files from a local directory.
 - Split documents into overlapping chunks with stable character offsets.
 - Retrieve chunks with a deterministic token-overlap baseline.
 - Build, save, load, and query a local TF-IDF retrieval index.
@@ -37,6 +37,8 @@ Add local demo documents under `data/raw/documents/`:
 New-Item -ItemType Directory -Force data/raw/documents
 Set-Content data/raw/documents/example.txt "A short local document about retrieval quality."
 ```
+
+Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet.
 
 Run a retrieval query:
 

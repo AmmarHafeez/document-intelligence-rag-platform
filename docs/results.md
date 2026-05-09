@@ -1,6 +1,6 @@
 # Results
 
-The initial version includes unit-tested local retrieval components for ingestion, chunking, keyword retrieval, TF-IDF vector retrieval, saved index loading, extractive grounded answer generation, deterministic grounding evaluation, retrieval evaluation, evaluation metrics, and FastAPI serving.
+The initial version includes unit-tested local retrieval components for text, Markdown, and PDF ingestion, chunking, keyword retrieval, TF-IDF vector retrieval, saved index loading, extractive grounded answer generation, deterministic grounding evaluation, retrieval evaluation, evaluation metrics, and FastAPI serving.
 
 ## Local Smoke-Test Results
 

@@ -25,7 +25,7 @@ Set-Content data/raw/documents/guide.txt "Retrieval quality depends on matching 
 Set-Content data/raw/documents/notes.md "# Notes`nChunk overlap helps preserve context across chunk boundaries."
 ```
 
-`data/raw/` is ignored by Git so private local documents remain outside version control.
+Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet. `data/raw/` is ignored by Git so private local documents remain outside version control.
 
 ## Add Local Evaluation Queries
 
