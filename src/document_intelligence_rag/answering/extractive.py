@@ -36,6 +36,26 @@ STOPWORDS = {
 
 
 @dataclass(frozen=True, slots=True)
+class CitedSource:
+    chunk_id: str
+    document_id: str
+    source_path: str
+    text: str
+    preview: str
+    score: float
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "chunk_id": self.chunk_id,
+            "document_id": self.document_id,
+            "source_path": self.source_path,
+            "text": self.text,
+            "preview": self.preview,
+            "score": self.score,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class SourcePreview:
     chunk_id: str
     document_id: str
@@ -58,6 +78,7 @@ class GroundedAnswer:
     answer: str
     cited_chunk_ids: list[str]
     cited_document_ids: list[str]
+    cited_sources: list[CitedSource]
     source_previews: list[SourcePreview]
     confidence_score: float
     insufficient_context: bool
@@ -67,6 +88,7 @@ class GroundedAnswer:
             "answer": self.answer,
             "cited_chunk_ids": self.cited_chunk_ids,
             "cited_document_ids": self.cited_document_ids,
+            "cited_sources": [source.to_dict() for source in self.cited_sources],
             "source_previews": [source.to_dict() for source in self.source_previews],
             "confidence_score": self.confidence_score,
             "insufficient_context": self.insufficient_context,
@@ -107,6 +129,7 @@ def _insufficient_answer(results: list[RetrievalResult] | None = None) -> Ground
         answer="Insufficient context to answer the question from retrieved chunks.",
         cited_chunk_ids=[],
         cited_document_ids=[],
+        cited_sources=[],
         source_previews=source_previews,
         confidence_score=0.0,
         insufficient_context=True,
@@ -131,6 +154,28 @@ def _source_previews(results: Iterable[RetrievalResult]) -> list[SourcePreview]:
         )
         seen_chunks.add(chunk.chunk_id)
     return previews
+
+
+def _cited_sources(results: Iterable[RetrievalResult]) -> list[CitedSource]:
+    sources: list[CitedSource] = []
+    seen_chunks: set[str] = set()
+    for result in results:
+        chunk = result.chunk
+        if chunk.chunk_id in seen_chunks:
+            continue
+        preview = preview_text(chunk.text)
+        sources.append(
+            CitedSource(
+                chunk_id=chunk.chunk_id,
+                document_id=chunk.document_id,
+                source_path=str(chunk.source_path),
+                text=chunk.text,
+                preview=preview,
+                score=result.score,
+            )
+        )
+        seen_chunks.add(chunk.chunk_id)
+    return sources
 
 
 def _rank_candidates(
@@ -213,6 +258,7 @@ def build_extractive_answer(
         answer=" ".join(candidate.sentence for candidate in selected),
         cited_chunk_ids=cited_chunk_ids,
         cited_document_ids=cited_document_ids,
+        cited_sources=_cited_sources(selected_results),
         source_previews=_source_previews(selected_results),
         confidence_score=confidence_score,
         insufficient_context=False,

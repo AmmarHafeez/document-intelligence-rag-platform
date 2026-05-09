@@ -14,6 +14,8 @@ flowchart LR
     I --> J
     J --> O["Grounded answer builder"]
     O --> P["Extractive answer with citations"]
+    P --> Q["Grounding evaluation"]
+    Q --> R["Grounding report under reports/metrics/"]
     J --> K["Evaluation metrics"]
     J --> N["Evaluation report under reports/metrics/"]
     I --> L["FastAPI service"]
@@ -46,6 +48,10 @@ Provides simple retrieval metrics for small labeled examples: recall@k, precisio
 ### Grounded Answering
 
 Selects sentences from retrieved chunks using question-token overlap. Answers are extractive and include cited chunk IDs, cited document IDs, source previews, and a simple coverage score.
+
+### Grounding Evaluation
+
+Checks answer sentences against cited source text or previews, reports unsupported sentences, and computes deterministic citation coverage and sentence support metrics.
 
 ### Retrieval Evaluation Workflow
 

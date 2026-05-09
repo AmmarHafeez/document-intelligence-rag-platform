@@ -94,6 +94,18 @@ python -m document_intelligence_rag.answering.answer_query `
 
 Answer JSON is written to `reports/artifacts/`, which is ignored by Git. The answer text is grounded in retrieved chunks and includes cited chunk and document IDs.
 
+## Run Grounding Evaluation
+
+The grounding evaluator checks whether answer sentences are supported by cited source text. If full cited text is unavailable, it falls back to source previews and records that in the report.
+
+```powershell
+python -m document_intelligence_rag.evaluation.evaluate_grounding `
+  --answers reports/artifacts/answer_result.json `
+  --output reports/metrics/grounding_eval.json
+```
+
+Grounding metrics are written to `reports/metrics/`, which is ignored by Git. These checks are deterministic support checks, not human evaluation.
+
 ## Run Keyword Evaluation
 
 ```powershell
@@ -132,6 +144,16 @@ The current local smoke-test run used `data/raw/evaluation/queries.json` with 3 
 | tfidf | 1.0 | 0.3333 | 1.0 | `reports/metrics/retrieval_eval_tfidf.json` |
 
 These are tiny local smoke-test results, not a real benchmark. Generated documents, evaluation labels, and metrics JSON remain local and ignored by Git.
+
+## Current Local Grounding Result
+
+The current local grounding smoke test used `reports/artifacts/answer_result.json` and wrote metrics to `reports/metrics/grounding_eval.json`. Both generated files remain local and ignored by Git.
+
+| answer_count | evaluated_answer_count | insufficient_context_count | sentence_support_rate | citation_coverage | unsupported_sentence_count | full_text_available_count |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 1 | 0 | 1.0 | 1.0 | 0 | 0 |
+
+The evaluator used cited source previews because full cited source text was not available in this generated answer JSON. Both answer sentences were matched to cited source previews, and no unsupported sentence was detected. This is a tiny local smoke-test result, not human evaluation or a broad benchmark.
 
 ## Start API
 

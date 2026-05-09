@@ -79,4 +79,6 @@ def test_answer_cli_writes_json(tmp_path, capsys):
     assert payload["insufficient_context"] is False
     assert payload["cited_chunk_ids"] == ["doc_rag:0000"]
     assert payload["cited_document_ids"] == ["doc_rag"]
+    assert payload["cited_sources"][0]["chunk_id"] == "doc_rag:0000"
+    assert "grounded answers" in payload["cited_sources"][0]["text"]
     assert "Retrieval augmented generation" in payload["answer"]
