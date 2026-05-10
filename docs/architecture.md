@@ -1,29 +1,78 @@
 # Architecture
 
 ```mermaid
-flowchart LR
-    A["Demo corpus generator"] --> B["Local documents (.txt, .md, .pdf)"]
-    A --> C["Local relevance labels"]
-    B --> D["Ingestion"]
-    D --> E["Document objects"]
-    E --> F["Chunking"]
-    F --> G["Text chunks with IDs and offsets"]
-    G --> H["Keyword retriever"]
-    G --> I["TF-IDF index builder"]
-    I --> J["Saved index under indexes/"]
-    J --> K["TF-IDF retriever"]
-    H --> L["Ranked chunks"]
-    K --> L
-    C --> M["Retrieval evaluation"]
-    L --> M
-    M --> N["Metrics report under reports/metrics/"]
-    L --> O["Grounded answer builder"]
-    O --> P["Extractive answer with citations"]
-    P --> Q["Grounding evaluation"]
-    Q --> R["Grounding report under reports/metrics/"]
-    K --> S["FastAPI /retrieve"]
-    O --> T["FastAPI /answer"]
-    J --> U["Query CLI"]
+flowchart TB
+    subgraph LocalInputs["Local Inputs"]
+        A["Demo corpus generator"]
+        B["Local documents<br/>.txt, .md, text-based .pdf"]
+        C["Local relevance labels"]
+        ARaw["Ignored: data/raw/"]
+        A --> B
+        A --> C
+        B -. stored under .-> ARaw
+        C -. stored under .-> ARaw
+    end
+
+    subgraph Processing["Ingestion And Chunking"]
+        D["Ingestion"]
+        E["Document objects"]
+        F["Chunking"]
+        G["Text chunks<br/>IDs + offsets"]
+        B --> D
+        D --> E
+        E --> F
+        F --> G
+    end
+
+    subgraph Retrieval["Retrieval"]
+        H["Keyword retriever"]
+        I["TF-IDF index build"]
+        J["Saved TF-IDF index"]
+        K["TF-IDF index load"]
+        U["Query CLI"]
+        Idx["Ignored: indexes/"]
+        G --> H
+        G --> I
+        I --> J
+        J --> K
+        J -. stored under .-> Idx
+        K --> U
+    end
+
+    subgraph Evaluation["Retrieval Evaluation"]
+        L["Ranked chunks"]
+        M["Retrieval evaluation"]
+        N["Metrics report"]
+        Metrics["Ignored: reports/metrics/"]
+        H --> L
+        K --> L
+        C --> M
+        L --> M
+        M --> N
+        N -. stored under .-> Metrics
+    end
+
+    subgraph Answering["Grounded Answering"]
+        O["Grounded extractive answer builder"]
+        P["Answer JSON with citations"]
+        Q["Grounding evaluation"]
+        R["Grounding metrics report"]
+        Artifacts["Ignored: reports/artifacts/"]
+        L --> O
+        O --> P
+        P --> Q
+        Q --> R
+        P -. stored under .-> Artifacts
+        R -. stored under .-> Metrics
+    end
+
+    subgraph API["FastAPI"]
+        Health["GET /health"]
+        Retrieve["POST /retrieve"]
+        Answer["POST /answer"]
+        K --> Retrieve
+        O --> Answer
+    end
 ```
 
 ## Component Responsibilities
