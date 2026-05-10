@@ -2,71 +2,60 @@
 
 ```mermaid
 flowchart LR
-    Z["Demo corpus generator"] --> A["Local documents (.txt, .md, .pdf)"]
-    Z --> Y["Local relevance labels"]
-    A --> B["Ingestion"]
-    B --> C["Document objects"]
-    C --> D["Chunking"]
-    D --> E["Text chunks with offsets"]
-    E --> F["Keyword retriever"]
-    E --> G["TF-IDF index builder"]
-    G --> H["Saved index under indexes/"]
-    H --> I["TF-IDF retriever"]
-    F --> J["Ranked chunks"]
-    I --> J
-    J --> O["Grounded answer builder"]
+    A["Demo corpus generator"] --> B["Local documents (.txt, .md, .pdf)"]
+    A --> C["Local relevance labels"]
+    B --> D["Ingestion"]
+    D --> E["Document objects"]
+    E --> F["Chunking"]
+    F --> G["Text chunks with IDs and offsets"]
+    G --> H["Keyword retriever"]
+    G --> I["TF-IDF index builder"]
+    I --> J["Saved index under indexes/"]
+    J --> K["TF-IDF retriever"]
+    H --> L["Ranked chunks"]
+    K --> L
+    C --> M["Retrieval evaluation"]
+    L --> M
+    M --> N["Metrics report under reports/metrics/"]
+    L --> O["Grounded answer builder"]
     O --> P["Extractive answer with citations"]
     P --> Q["Grounding evaluation"]
     Q --> R["Grounding report under reports/metrics/"]
-    J --> K["Evaluation metrics"]
-    J --> N["Evaluation report under reports/metrics/"]
-    I --> L["FastAPI service"]
-    O --> L
-    H --> M["Query CLI"]
+    K --> S["FastAPI /retrieve"]
+    O --> T["FastAPI /answer"]
+    J --> U["Query CLI"]
 ```
 
 ## Component Responsibilities
 
-### Ingestion
-
-Reads local `.txt`, `.md`, and text-based `.pdf` files, derives stable document metadata, and rejects unsupported file extensions with clear errors. PDF ingestion extracts local text only; scanned-image PDFs and OCR are not supported.
-
 ### Demo Corpus Generation
 
-Creates tiny local demo documents and matching retrieval evaluation labels under ignored `data/raw/` paths. Existing files are preserved unless overwrite is requested.
+Creates tiny local demo documents and matching retrieval labels under ignored `data/raw/` paths. Existing files are preserved unless overwrite is requested.
+
+### Ingestion
+
+Reads local `.txt`, `.md`, and text-based `.pdf` files. It derives deterministic document IDs from file names, records source paths and metadata such as PDF page count, and raises clear errors for unsupported or unreadable files. Scanned-image PDFs and OCR are not supported.
 
 ### Chunking
 
-Splits document text into overlapping character windows. Each chunk carries its source document, source path, text, and start/end offsets.
+Splits document text into overlapping chunks. Each chunk includes a stable chunk ID, document ID, source path, text, and character offsets.
 
 ### Retrieval
 
-Builds an in-memory keyword baseline over chunks. Queries are tokenized deterministically, scored by token overlap, and returned in ranked order.
+Provides a deterministic keyword baseline and a TF-IDF backend. The TF-IDF backend can build, save, load, and query a local index.
 
-### TF-IDF Vector Retrieval
+### Retrieval Evaluation
 
-Builds a local TF-IDF matrix from chunk text, saves it with the chunk metadata, and loads it for deterministic cosine-similarity retrieval.
-
-### Evaluation
-
-Provides simple retrieval metrics for small labeled examples: recall@k, precision@k, and mean reciprocal rank.
+Reads local relevance labels, runs a selected retriever, and writes recall@k, precision@k, mean reciprocal rank, and per-query details to `reports/metrics/`.
 
 ### Grounded Answering
 
-Selects sentences from retrieved chunks using question-token overlap. Answers are extractive and include cited chunk IDs, cited document IDs, source previews, and a simple coverage score.
+Builds extractive answers by selecting sentences from retrieved chunks. Responses include cited chunk IDs, cited document IDs, source previews, and a simple coverage score.
 
 ### Grounding Evaluation
 
-Checks answer sentences against cited source text or previews, reports unsupported sentences, and computes deterministic citation coverage and sentence support metrics.
-
-### Retrieval Evaluation Workflow
-
-Reads local relevance labels, builds the selected retriever in memory, evaluates ranked results per query, and writes a JSON metrics report under `reports/metrics/`.
+Checks answer sentences against cited source text or previews. It reports sentence support, citation coverage, and unsupported sentences using deterministic local checks.
 
 ### API
 
-Loads the configured saved TF-IDF index at startup and serves retrieval through `POST /retrieve` and extractive answering through `POST /answer`. `GET /health` remains available even when no saved index is present.
-
-### Configuration
-
-Defaults live in `configs/default.yaml` and control the local document path, chunk size, chunk overlap, default result count, retriever backend, and saved index path.
+`GET /health` reports service and index status. `POST /retrieve` returns ranked chunks. `POST /answer` returns an extractive answer with citations. The API loads the configured local TF-IDF index when available.

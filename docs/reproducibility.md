@@ -2,7 +2,7 @@
 
 These steps assume PowerShell from the repository root.
 
-## Install
+## 1. Install
 
 ```powershell
 python -m venv .venv
@@ -11,13 +11,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## Run Tests
-
-```powershell
-python -m pytest
-```
-
-## Generate Local Demo Corpus
+## 2. Generate Demo Corpus
 
 ```powershell
 python -m document_intelligence_rag.ingestion.create_demo_corpus `
@@ -26,17 +20,9 @@ python -m document_intelligence_rag.ingestion.create_demo_corpus `
   --include-pdf
 ```
 
-The generator creates `rag_intro.md`, `vector_search.txt`, optional `pdf_ingestion_demo.pdf`, and matching `data/raw/evaluation/queries.json` relevance labels. It does not overwrite existing files unless `--overwrite` is passed.
+The generator creates `rag_intro.md`, `vector_search.txt`, optional `pdf_ingestion_demo.pdf`, and `data/raw/evaluation/queries.json`. It does not overwrite existing files unless `--overwrite` is passed. `data/raw/` is ignored by Git.
 
-Local documents can be `.txt`, `.md`, or text-based `.pdf` files. Scanned-image PDFs and OCR are not supported yet. `data/raw/` is ignored by Git so generated demo files and private local documents remain outside version control.
-
-## Local Evaluation Queries
-
-Evaluation labels live outside Git under `data/raw/evaluation/`. Document IDs are derived from local file names, so `data/raw/documents/rag_intro.md` has document ID `rag_intro`. Labels can use `relevant_document_ids`, `relevant_chunk_ids`, or both. When chunk labels are present, evaluation uses chunk IDs for that query.
-
-## Build TF-IDF Index
-
-The command reads local documents, chunks them, builds a TF-IDF retrieval index, and saves it under `indexes/`.
+## 3. Build TF-IDF Index
 
 ```powershell
 python -m document_intelligence_rag.retrieval.build_index `
@@ -47,65 +33,20 @@ python -m document_intelligence_rag.retrieval.build_index `
   --backend tfidf
 ```
 
-## Query Saved Index
+The saved index is written under `indexes/`, which is ignored by Git.
+
+## 4. Query Index
 
 ```powershell
 python -m document_intelligence_rag.retrieval.query_index `
-  --index-path indexes/tfidf_index.joblib `
-  --query "chunk overlap" `
-  --top-k 3
-```
-
-Optionally write query output to an ignored artifacts folder:
-
-```powershell
-python -m document_intelligence_rag.retrieval.query_index `
-  --index-path indexes/tfidf_index.joblib `
-  --query "chunk overlap" `
-  --top-k 3 `
-  --output reports/artifacts/retrieval_results.json
-```
-
-## Ask A Grounded Question
-
-The answer workflow loads a saved retrieval index, retrieves chunks, and builds an extractive answer from retrieved sentences.
-
-```powershell
-python -m document_intelligence_rag.answering.answer_query `
   --index-path indexes/tfidf_index.joblib `
   --query "What is retrieval augmented generation?" `
-  --top-k 3 `
-  --output reports/artifacts/answer_result.json
-```
-
-Answer JSON is written to `reports/artifacts/`, which is ignored by Git. The answer text is grounded in retrieved chunks and includes cited chunk and document IDs.
-
-## Run Grounding Evaluation
-
-The grounding evaluator checks whether answer sentences are supported by cited source text. If full cited text is unavailable, it falls back to source previews and records that in the report.
-
-```powershell
-python -m document_intelligence_rag.evaluation.evaluate_grounding `
-  --answers reports/artifacts/answer_result.json `
-  --output reports/metrics/grounding_eval.json
-```
-
-Grounding metrics are written to `reports/metrics/`, which is ignored by Git. These checks are deterministic support checks, not human evaluation.
-
-## Run Keyword Evaluation
-
-```powershell
-python -m document_intelligence_rag.evaluation.evaluate_retrieval `
-  --documents-dir data/raw/documents `
-  --queries data/raw/evaluation/queries.json `
-  --output reports/metrics/retrieval_eval_keyword.json `
-  --backend keyword `
-  --chunk-size 800 `
-  --chunk-overlap 120 `
   --top-k 3
 ```
 
-## Run TF-IDF Evaluation
+Optional JSON output can be written to `reports/artifacts/`, which is ignored by Git.
+
+## 5. Run Retrieval Evaluation
 
 ```powershell
 python -m document_intelligence_rag.evaluation.evaluate_retrieval `
@@ -120,53 +61,49 @@ python -m document_intelligence_rag.evaluation.evaluate_retrieval `
 
 Evaluation reports are written to `reports/metrics/`, which is ignored by Git.
 
-## Current Local Evaluation Results
+## 6. Generate Grounded Answer
 
-The current local smoke-test run used the generated demo corpus under `data/raw/` with 3 documents (`rag_intro.md`, `vector_search.txt`, and `pdf_ingestion_demo.pdf`), 3 chunks, and 3 queries. The TF-IDF evaluation used `evaluated_at_k: 3`. Generated documents, the retrieval index, and metrics files remain ignored by Git.
+```powershell
+python -m document_intelligence_rag.answering.answer_query `
+  --index-path indexes/tfidf_index.joblib `
+  --query "What is retrieval augmented generation?" `
+  --top-k 3 `
+  --output reports/artifacts/answer_result.json
+```
 
-The PDF ingestion demo was included as `pdf_ingestion_demo.pdf` and was retrieved correctly for the PDF query.
+Answers are extractive: the answer text is assembled from retrieved context and returned with cited chunk and document IDs.
 
-| Backend | document_count | chunk_count | query_count | evaluated_at_k | recall_at_k | precision_at_k | mean_reciprocal_rank | Metrics file |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| tfidf | 3 | 3 | 3 | 3 | 1.0 | 0.3333 | 1.0 | `reports/metrics/demo_retrieval_eval_tfidf.json` |
+## 7. Run Grounding Evaluation
 
-These are tiny generated local demo corpus results, not a broad benchmark.
+```powershell
+python -m document_intelligence_rag.evaluation.evaluate_grounding `
+  --answers reports/artifacts/answer_result.json `
+  --output reports/metrics/grounding_eval.json
+```
 
-## Current Local Grounding Result
+The grounding evaluator checks whether answer sentences are supported by cited source text or previews. These checks are deterministic support checks, not human evaluation.
 
-The current local grounding smoke test used `reports/artifacts/answer_result.json` and wrote metrics to `reports/metrics/grounding_eval.json`. Both generated files remain local and ignored by Git.
-
-| answer_count | evaluated_answer_count | insufficient_context_count | sentence_support_rate | citation_coverage | unsupported_sentence_count | full_text_available_count |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 1 | 0 | 1.0 | 1.0 | 0 | 0 |
-
-The evaluator used cited source previews because full cited source text was not available in this generated answer JSON. Both answer sentences were matched to cited source previews, and no unsupported sentence was detected. This is a tiny local smoke-test result, not human evaluation or a broad benchmark.
-
-## Start API
-
-The default API configuration loads `indexes/tfidf_index.joblib`.
+## 8. Start API
 
 ```powershell
 uvicorn document_intelligence_rag.api:app --host 127.0.0.1 --port 8000
 ```
 
-## Call Health
+The default configuration loads `indexes/tfidf_index.joblib`.
+
+## 9. Call API
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
-
-## Call Retrieval
 
 ```powershell
 Invoke-RestMethod `
   -Method Post `
   -Uri http://127.0.0.1:8000/retrieve `
   -ContentType "application/json" `
-  -Body '{"query":"chunk overlap","top_k":3}'
+  -Body '{"query":"What is retrieval augmented generation?","top_k":3}'
 ```
-
-## Call Answer
 
 ```powershell
 Invoke-RestMethod `
@@ -175,3 +112,9 @@ Invoke-RestMethod `
   -ContentType "application/json" `
   -Body '{"query":"What is retrieval augmented generation?","top_k":3}'
 ```
+
+## Local Smoke-Test Results
+
+The generated demo corpus smoke test used 3 documents, 3 chunks, and 3 queries. The TF-IDF run produced recall@3 `1.0`, precision@3 `0.3333`, and MRR `1.0`. The grounding smoke test produced sentence support rate `1.0` and citation coverage `1.0`.
+
+These are tiny local smoke-test results, not broad benchmarks. Generated documents, indexes, answer JSON, and metrics remain ignored by Git.
